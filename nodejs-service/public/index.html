@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <title>Calculator | Integration Basics</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --black: #050a16;
+            --number: rgba(225, 231, 225, 0.9);
+            --utility: rgba(255, 255, 255, 0.12);
+            --operator-rgb: 59, 130, 246;
+            --equals-rgb: 34, 211, 238;
+            --screen: #111;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            background-color: var(--black);
+            background-image:
+                linear-gradient(118deg, rgba(37, 99, 235, 0.32), transparent 42%),
+                linear-gradient(315deg, rgba(14, 165, 233, 0.2), transparent 38%),
+                repeating-linear-gradient(0deg, transparent 0 47px, rgba(255, 255, 255, 0.025) 48px),
+                repeating-linear-gradient(90deg, transparent 0 47px, rgba(255, 255, 255, 0.025) 48px),
+                linear-gradient(145deg, #050a16, #0b1426 55%, #070b14);
+            background-attachment: fixed;
+        }
+
+        main {
+            width: min(calc(100% - 36px), 410px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 24px 22px 26px;
+            border: 1px solid rgba(255, 255, 255, 0.17);
+            border-radius: 30px;
+            background: linear-gradient(155deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035) 45%, rgba(255, 255, 255, 0.07));
+            box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+            -webkit-backdrop-filter: blur(28px) saturate(145%);
+            backdrop-filter: blur(28px) saturate(145%);
+        }
+
+        .brand {
+            margin: 0 0 22px;
+            color: rgba(220, 231, 224, 0.63);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .display {
+            min-height: 142px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            margin-bottom: 18px;
+            overflow: hidden;
+            padding: 18px 8px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 19px;
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.56), rgba(16, 25, 42, 0.72));
+            box-shadow: inset 0 1px 12px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+            text-align: right;
+        }
+
+        #expression {
+            width: 100%;
+            min-height: 22px;
+            overflow: hidden;
+            color: rgba(224, 232, 226, 0.5);
+            font-size: 16px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #output {
+            max-width: 100%;
+            overflow: hidden;
+            font-size: 54px;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.15;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #output.error { color: #ff785f; font-size: 18px; white-space: normal; }
+
+        .keypad {
+            --key-gap: 12px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--key-gap);
+        }
+
+        button {
+            width: 100%;
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.035)), var(--utility);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 7px 16px rgba(0, 0, 0, 0.24);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            backdrop-filter: blur(12px) saturate(150%);
+            font: inherit;
+            font-size: 23px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: filter 120ms ease, transform 120ms ease;
+        }
+
+        button:hover { filter: brightness(1.2); }
+        button:active { transform: scale(0.94); }
+        button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+        button.number, button.decimal {
+            color: #151515;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(198, 211, 201, 0.68));
+            border-color: rgba(255, 255, 255, 0.65);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), inset 0 -1px 0 rgba(80, 95, 84, 0.12), 0 7px 16px rgba(0, 0, 0, 0.24);
+        }
+        button.operator {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.4), rgba(var(--operator-rgb), 0.82) 48%, rgba(37, 99, 235, 0.76));
+            border-color: rgba(147, 197, 253, 0.6);
+            font-size: 27px;
+        }
+        button.equals {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(var(--equals-rgb), 0.84) 48%, rgba(6, 182, 212, 0.78));
+            border-color: rgba(165, 243, 252, 0.65);
+            color: #082f49;
+            font-size: 28px;
+        }
+        button.wide {
+            grid-column: 2 / span 2;
+            justify-self: center;
+            width: calc((100% - var(--key-gap)) / 2);
+            aspect-ratio: 1;
+        }
+        button:disabled { cursor: wait; opacity: 0.6; }
+
+        .history-toggle {
+            position: fixed;
+            z-index: 5;
+            top: 22px;
+            left: 22px;
+            width: auto;
+            min-height: 44px;
+            aspect-ratio: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            border-radius: 999px;
+            padding: 0 15px;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .history-toggle svg { width: 17px; height: 17px; }
+
+        .drawer-backdrop {
+            position: fixed;
+            z-index: 8;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            border-radius: 0;
+            background: rgba(0, 0, 0, 0.48);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+        }
+
+        .drawer-backdrop[hidden], .history-drawer[hidden] { display: none; }
+
+        .history-drawer {
+            position: fixed;
+            z-index: 9;
+            inset: 0 auto 0 0;
+            width: min(370px, calc(100vw - 28px));
+            display: flex;
+            flex-direction: column;
+            padding: 26px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-left: 0;
+            border-radius: 0 24px 24px 0;
+            background: linear-gradient(155deg, rgba(23, 35, 55, 0.92), rgba(5, 9, 20, 0.88));
+            box-shadow: 18px 0 70px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            -webkit-backdrop-filter: blur(28px) saturate(145%);
+            backdrop-filter: blur(28px) saturate(145%);
+            transform: translateX(0);
+            transition: transform 220ms ease;
+        }
+
+        .history-drawer[hidden] { display: flex; transform: translateX(-102%); visibility: hidden; }
+        .history-drawer-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .history-drawer h2 { margin: 0; font-size: 18px; font-weight: 600; }
+
+        .drawer-close {
+            width: 38px;
+            min-height: 38px;
+            aspect-ratio: 1;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 21px;
+        }
+
+        .history-list { margin: 22px -4px 0; padding: 0 4px; overflow-y: auto; }
+        .history-empty { color: rgba(230, 238, 232, 0.55); font-size: 14px; }
+
+        .history-item {
+            width: 100%;
+            min-height: 0;
+            aspect-ratio: auto;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 4px 14px;
+            margin: 0;
+            border: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0;
+            padding: 14px 5px;
+            background: transparent;
+            box-shadow: none;
+            text-align: left;
+        }
+
+        .history-item:hover { background: rgba(255, 255, 255, 0.06); filter: none; }
+        .history-item-expression { color: rgba(224, 232, 226, 0.65); font-size: 13px; }
+        .history-item-result { grid-column: 1; color: #fff; font-size: 18px; font-variant-numeric: tabular-nums; }
+        .history-item-time { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: rgba(224, 232, 226, 0.45); font-size: 11px; }
+
+        @media (max-width: 360px) {
+            main { padding-right: 16px; padding-left: 16px; }
+            .keypad { --key-gap: 9px; }
+            button { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <button id="historyToggle" class="history-toggle" type="button" aria-expanded="false" aria-controls="historyDrawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+            <path d="M3 3v5h5M12 7v5l3 2" />
+        </svg>
+        <span>History</span>
+    </button>
+    <button id="drawerBackdrop" class="drawer-backdrop" type="button" aria-label="Close calculation history" hidden></button>
+    <aside id="historyDrawer" class="history-drawer" aria-label="Calculation history" aria-hidden="true" hidden>
+        <div class="history-drawer-header">
+            <h2>Recent calculations</h2>
+            <button id="historyClose" class="drawer-close" type="button" aria-label="Close history">×</button>
+        </div>
+        <div id="historyList" class="history-list" aria-live="polite">
+            <p class="history-empty">Loading history...</p>
+        </div>
+    </aside>
+    <main>
+        <p class="brand">KALKYOLITOR</p>
+        <section class="display" aria-live="polite" aria-label="Calculator display">
+            <div id="expression"></div>
+            <output id="output">0</output>
+        </section>
+        <section class="keypad" aria-label="Calculator keypad">
+            <button type="button" data-action="clear" aria-label="All clear">AC</button>
+            <button type="button" data-action="sign" aria-label="Change sign">+/-</button>
+            <button type="button" data-operation="modulo" class="operator">%</button>
+            <button type="button" data-operation="divide" class="operator" aria-label="Divide">÷</button>
+
+            <button type="button" data-digit="7" class="number">7</button>
+            <button type="button" data-digit="8" class="number">8</button>
+            <button type="button" data-digit="9" class="number">9</button>
+            <button type="button" data-operation="multiply" class="operator" aria-label="Multiply">×</button>
+
+            <button type="button" data-digit="4" class="number">4</button>
+            <button type="button" data-digit="5" class="number">5</button>
+            <button type="button" data-digit="6" class="number">6</button>
+            <button type="button" data-operation="subtract" class="operator" aria-label="Subtract">−</button>
+
+            <button type="button" data-digit="1" class="number">1</button>
+            <button type="button" data-digit="2" class="number">2</button>
+            <button type="button" data-digit="3" class="number">3</button>
+            <button type="button" data-operation="add" class="operator" aria-label="Add">+</button>
+
+            <button type="button" data-action="square-root" aria-label="Square root">√</button>
+            <button type="button" data-digit="0" class="number">0</button>
+            <button type="button" data-action="decimal" class="decimal">.</button>
+            <button type="button" data-action="power" class="operator" aria-label="Raise to a power">xʸ</button>
+
+            <button type="button" data-action="equals" class="equals wide">=</button>
+        </section>
+    </main>
+    <script>
+        const keypad = document.querySelector('.keypad');
+        const expression = document.querySelector('#expression');
+        const output = document.querySelector('#output');
+        const historyToggle = document.querySelector('#historyToggle');
+        const historyDrawer = document.querySelector('#historyDrawer');
+        const historyList = document.querySelector('#historyList');
+        const drawerBackdrop = document.querySelector('#drawerBackdrop');
+        let displayValue = '0';
+        let firstOperand = null;
+        let pendingOperation = null;
+        let awaitingSecondOperand = false;
+
+        function render() {
+            output.textContent = displayValue;
+            output.classList.toggle('error', displayValue.startsWith('Error:'));
+        }
+
+        function enterDigit(digit) {
+            if (displayValue.startsWith('Error:') || awaitingSecondOperand) {
+                displayValue = digit;
+                awaitingSecondOperand = false;
+            } else if (displayValue === '0') {
+                displayValue = digit;
+            } else if (displayValue.replace('-', '').replace('.', '').length < 14) {
+                displayValue += digit;
+            }
+            render();
+        }
+
+        function operationLabel(operation) {
+            return ({ add: '+', subtract: '−', multiply: '×', divide: '÷', modulo: '%', power: '^' })[operation];
+        }
+
+        function closeHistory() {
+            historyToggle.setAttribute('aria-expanded', 'false');
+            historyDrawer.setAttribute('aria-hidden', 'true');
+            historyDrawer.hidden = true;
+            drawerBackdrop.hidden = true;
+        }
+
+        async function refreshHistory() {
+            historyList.replaceChildren();
+            try {
+                const response = await fetch('/api/history');
+                if (!response.ok) throw new Error(`Request failed (${response.status})`);
+                const history = await response.json();
+
+                if (history.length === 0) {
+                    const emptyMessage = document.createElement('p');
+                    emptyMessage.className = 'history-empty';
+                    emptyMessage.textContent = 'No calculations yet.';
+                    historyList.append(emptyMessage);
+                    return;
+                }
+
+                history.forEach((entry) => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'history-item';
+                    item.setAttribute('aria-label', `${entry.num1} ${operationLabel(entry.operation) || entry.operation} ${entry.num2} equals ${entry.result}`);
+
+                    const itemExpression = document.createElement('span');
+                    itemExpression.className = 'history-item-expression';
+                    itemExpression.textContent = `${entry.num1} ${operationLabel(entry.operation) || entry.operation} ${entry.num2}`;
+
+                    const itemResult = document.createElement('span');
+                    itemResult.className = 'history-item-result';
+                    itemResult.textContent = entry.result;
+
+                    const itemTime = document.createElement('time');
+                    itemTime.className = 'history-item-time';
+                    itemTime.dateTime = entry.timestamp;
+                    itemTime.textContent = new Date(entry.timestamp).toLocaleString();
+
+                    item.append(itemExpression, itemResult, itemTime);
+                    item.addEventListener('click', () => {
+                        displayValue = entry.result;
+                        expression.textContent = `${entry.num1} ${operationLabel(entry.operation) || entry.operation} ${entry.num2} =`;
+                        firstOperand = null;
+                        pendingOperation = null;
+                        awaitingSecondOperand = true;
+                        render();
+                        closeHistory();
+                    });
+                    historyList.append(item);
+                });
+            } catch (error) {
+                const errorMessage = document.createElement('p');
+                errorMessage.className = 'history-empty';
+                errorMessage.textContent = `Could not load history: ${error.message}`;
+                historyList.append(errorMessage);
+            }
+        }
+
+        async function requestCalculation(num1, num2, operation) {
+            let response;
+            try {
+                response = await fetch('/api/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num1, num2, operation })
+                });
+            } catch (error) {
+                throw new Error(`Could not reach the calculator API. Start the Node.js app at http://localhost:3000. ${error.message}`);
+            }
+
+            const responseText = await response.text();
+            if (!responseText) {
+                throw new Error(`Calculator API returned an empty response (HTTP ${response.status}). Open the app through the Node.js server at http://localhost:3000, not Live Server or a local file.`);
+            }
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch {
+                throw new Error(`Calculator API returned a non-JSON response (HTTP ${response.status}). Open the app through the Node.js server at http://localhost:3000, not Live Server or a local file.`);
+            }
+
+            if (!response.ok) {
+                throw new Error(data?.error || `Request failed (${response.status})`);
+            }
+            if (data?.python_result?.result === undefined) {
+                throw new Error(`Calculator API response is missing a result (HTTP ${response.status}). Make sure the Node.js and Python services are running.`);
+            }
+
+            return data.python_result.result;
+        }
+
+        async function selectOperation(operation) {
+            if (displayValue.startsWith('Error:')) return;
+            firstOperand = Number(displayValue);
+            pendingOperation = operation;
+            awaitingSecondOperand = true;
+            expression.textContent = `${displayValue} ${operationLabel(operation)}`;
+        }
+
+        async function calculate() {
+            if (pendingOperation === null || firstOperand === null || awaitingSecondOperand) return;
+            const secondOperand = Number(displayValue);
+            expression.textContent = `${firstOperand} ${operationLabel(pendingOperation)} ${secondOperand} =`;
+            const buttons = keypad.querySelectorAll('button');
+            buttons.forEach((button) => { button.disabled = true; });
+            displayValue = 'Calculating...';
+            render();
+
+            try {
+                const result = await requestCalculation(firstOperand, secondOperand, pendingOperation);
+                displayValue = String(result);
+                if (displayValue.startsWith('Error:')) expression.textContent = 'Calculation error';
+                firstOperand = null;
+                pendingOperation = null;
+                awaitingSecondOperand = true;
+                if (!historyDrawer.hidden) refreshHistory();
+            } catch (error) {
+                displayValue = `Error: ${error.message}`;
+                firstOperand = null;
+                pendingOperation = null;
+            } finally {
+                buttons.forEach((button) => { button.disabled = false; });
+                render();
+            }
+        }
+
+        async function squareRoot() {
+            const operand = Number(displayValue);
+            expression.textContent = `√(${displayValue})`;
+            const buttons = keypad.querySelectorAll('button');
+            buttons.forEach((button) => { button.disabled = true; });
+            displayValue = 'Calculating...';
+            render();
+            try {
+                displayValue = String(await requestCalculation(operand, 0, 'square_root'));
+                if (!historyDrawer.hidden) refreshHistory();
+            } catch (error) {
+                displayValue = `Error: ${error.message}`;
+            } finally {
+                buttons.forEach((button) => { button.disabled = false; });
+                firstOperand = null;
+                pendingOperation = null;
+                awaitingSecondOperand = true;
+                render();
+            }
+        }
+
+        keypad.addEventListener('click', (event) => {
+            const button = event.target.closest('button');
+            if (!button) return;
+
+            if (button.dataset.digit !== undefined) {
+                enterDigit(button.dataset.digit);
+            } else if (button.dataset.operation) {
+                selectOperation(button.dataset.operation);
+            } else if (button.dataset.action === 'clear') {
+                displayValue = '0';
+                firstOperand = null;
+                pendingOperation = null;
+                awaitingSecondOperand = false;
+                expression.textContent = '';
+                render();
+            } else if (button.dataset.action === 'sign' && !displayValue.startsWith('Error:')) {
+                displayValue = String(Number(displayValue) * -1);
+                render();
+            } else if (button.dataset.action === 'decimal') {
+                if (awaitingSecondOperand) {
+                    displayValue = '0.';
+                    awaitingSecondOperand = false;
+                } else if (!displayValue.includes('.')) {
+                    displayValue += '.';
+                }
+                render();
+            } else if (button.dataset.action === 'equals') {
+                calculate();
+            } else if (button.dataset.action === 'square-root') {
+                squareRoot();
+            } else if (button.dataset.action === 'power') {
+                selectOperation('power');
+            }
+        });
+
+        historyToggle.addEventListener('click', async () => {
+            const isOpen = !historyDrawer.hidden;
+            if (isOpen) {
+                closeHistory();
+                return;
+            }
+
+            historyToggle.setAttribute('aria-expanded', 'true');
+            historyDrawer.setAttribute('aria-hidden', 'false');
+            historyDrawer.hidden = false;
+            drawerBackdrop.hidden = false;
+            await refreshHistory();
+        });
+
+        document.querySelector('#historyClose').addEventListener('click', closeHistory);
+        drawerBackdrop.addEventListener('click', closeHistory);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !historyDrawer.hidden) closeHistory();
+        });
+    </script>
+</body>
+</html>
